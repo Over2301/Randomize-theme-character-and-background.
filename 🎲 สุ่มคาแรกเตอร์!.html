@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Character Spinner 🎨</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0b1a;
+    --surface: #16132b;
+    --card: #1e1a36;
+    --border: #2e2855;
+    --gold: #f5c842;
+    --purple: #9b6dff;
+    --pink: #ff6eb4;
+    --cyan: #4ddde0;
+    --green: #6bffb8;
+    --orange: #ff9f4a;
+    --text: #e8e0ff;
+    --muted: #7a72a8;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 80% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 60%, rgba(255,255,255,0.35) 0%, transparent 100%),
+      radial-gradient(1px 1px at 10% 80%, rgba(255,255,255,0.2) 0%, transparent 100%),
+      radial-gradient(1px 1px at 70% 85%, rgba(255,255,255,0.25) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 35% 15%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 90% 50%, rgba(255,255,255,0.2) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+  header { text-align: center; padding: 2rem 0 2rem; }
+  .title {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: clamp(1.4rem, 4.5vw, 2.5rem);
+    background: linear-gradient(135deg, var(--gold), var(--purple), var(--pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.3;
+    margin-bottom: 0.4rem;
+  }
+  .subtitle { color: var(--muted); font-size: 0.9rem; font-weight: 600; }
+
+  /* Category tabs */
+  .category-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.8rem;
+  }
+  .cat-tab {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    transition: all 0.2s;
+  }
+  .cat-tab:hover, .cat-tab.active { border-color: var(--purple); color: var(--purple); background: rgba(155,109,255,0.12); }
+
+  .spin-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.2rem;
+    margin-bottom: 2.5rem;
+  }
+  .wheel-wrap { position: relative; width: 200px; height: 200px; }
+  #wheel-canvas { border-radius: 50%; display: block; }
+  .wheel-pointer {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 26px; height: 26px;
+    background: #fff;
+    border-radius: 50%;
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 0 3px var(--gold);
+    z-index: 2;
+  }
+  .spin-btn {
+    background: linear-gradient(135deg, var(--purple), var(--pink));
+    color: #fff;
+    border: none;
+    padding: 0.85rem 2.8rem;
+    border-radius: 50px;
+    font-size: 1.1rem;
+    font-weight: 800;
+    font-family: 'Nunito', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 30px rgba(155,109,255,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .spin-btn:hover { transform: scale(1.04); box-shadow: 0 6px 36px rgba(155,109,255,0.55); }
+  .spin-btn:active { transform: scale(0.97); }
+  .spin-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* Result section */
+  #result-section {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s, transform 0.5s;
+    pointer-events: none;
+  }
+  #result-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+  }
+
+  /* Category groups */
+  .cat-group {
+    margin-bottom: 2rem;
+  }
+  .cat-group-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.8rem;
+    padding-left: 0.3rem;
+    border-left: 3px solid var(--border);
+    padding-left: 0.7rem;
+  }
+  .traits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 0.7rem;
+  }
+
+  .trait-card {
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.15s;
+  }
+  .trait-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    border-radius: 12px 0 0 12px;
+  }
+  .trait-card:hover { transform: translateY(-1px); }
+  .trait-card.spinning .trait-value { animation: slot 0.07s steps(1) infinite; }
+  @keyframes slot { 0%{opacity:1} 50%{opacity:0.3} }
+
+  .trait-icon { font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center; }
+  .trait-info { flex: 1; min-width: 0; }
+  .trait-label {
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 0.15rem;
+    opacity: 0.75;
+  }
+  .trait-value {
+    font-size: 0.88rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+  }
+  .reroll-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.95rem;
+    padding: 0.2rem;
+    border-radius: 6px;
+    transition: color 0.2s, transform 0.3s;
+    flex-shrink: 0;
+  }
+  .reroll-btn:hover { color: var(--text); transform: rotate(180deg); }
+
+  /* accent colors */
+  .c1::before{background:#ff9f4a} .c1 .trait-label{color:#ff9f4a}
+  .c2::before{background:#9b6dff} .c2 .trait-label{color:#9b6dff}
+  .c3::before{background:#ff6eb4} .c3 .trait-label{color:#ff6eb4}
+  .c4::before{background:#4ddde0} .c4 .trait-label{color:#4ddde0}
+  .c5::before{background:#6bffb8} .c5 .trait-label{color:#6bffb8}
+  .c6::before{background:#f5c842} .c6 .trait-label{color:#f5c842}
+  .c7::before{background:#e473ff} .c7 .trait-label{color:#e473ff}
+  .c8::before{background:#7ec8ff} .c8 .trait-label{color:#7ec8ff}
+  .c9::before{background:#b8ff6e} .c9 .trait-label{color:#b8ff6e}
+  .c10::before{background:#ffb347} .c10 .trait-label{color:#ffb347}
+  .c11::before{background:#ff7070} .c11 .trait-label{color:#ff7070}
+  .c12::before{background:#70c8ff} .c12 .trait-label{color:#70c8ff}
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .btn-outline {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--text);
+    padding: 0.6rem 1.5rem;
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Nunito', sans-serif;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--purple); background: rgba(155,109,255,0.1); }
+
+  /* Particles */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    z-index: 999;
+    border-radius: 50%;
+    animation: particle-up 1.2s ease-out forwards;
+  }
+  @keyframes particle-up {
+    0%{opacity:1;transform:translate(0,0) scale(1)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-backdrop.open { opacity:1; pointer-events:all; }
+  .modal {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 20px;
+    padding: 1.8rem;
+    max-width: 520px;
+    width: 90%;
+    text-align: center;
+  }
+  .modal h3 { font-family:'Cinzel Decorative',serif; color:var(--gold); margin-bottom:1rem; font-size:1rem; }
+  .modal pre {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: 'Nunito', sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.9;
+    text-align: left;
+    color: var(--text);
+    white-space: pre-wrap;
+    margin-bottom: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+  .modal-close {
+    background: var(--purple); color:#fff; border:none;
+    padding: 0.55rem 1.5rem; border-radius:50px;
+    font-weight:800; cursor:pointer;
+    font-family:'Nunito',sans-serif; margin-right:0.5rem;
+  }
+  .copy-done { color:var(--green); font-size:0.78rem; margin-top:0.5rem; opacity:0; transition:opacity 0.3s; }
+  .copy-done.show { opacity:1; }
+
+  @media(max-width:500px){
+    .traits-grid{grid-template-columns:1fr 1fr;}
+    .trait-value{font-size:0.78rem;}
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="title">✦ Character Spinner ✦</div>
+    <div class="subtitle">หมุนวงล้อ · รับคาแรกเตอร์ · วาดเลย!</div>
+  </header>
+
+  <div class="spin-zone">
+    <div class="wheel-wrap">
+      <canvas id="wheel-canvas" width="200" height="200"></canvas>
+      <div class="wheel-pointer"></div>
+    </div>
+    <button class="spin-btn" id="spin-btn" onclick="spinAll()">🎲 สุ่มคาแรกเตอร์!</button>
+  </div>
+
+  <div id="result-section">
+    <div id="traits-container"></div>
+    <div class="actions">
+      <button class="btn-outline" onclick="spinAll()">🔄 สุ่มใหม่ทั้งหมด</button>
+      <button class="btn-outline" onclick="showSheet()">📋 คัดลอก Sheet</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <h3>📋 Character Sheet</h3>
+    <pre id="sheet-text"></pre>
+    <button class="modal-close" onclick="copySheet()">คัดลอก</button>
+    <button class="btn-outline" onclick="document.getElementById('modal').classList.remove('open')" style="font-size:0.82rem">ปิด</button>
+    <div class="copy-done" id="copy-done">✓ คัดลอกแล้ว!</div>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = [
+  {
+    id: 'face', label: '👤 ใบหน้า', traits: [
+      { key:'face_shape', label:'รูปหน้า', icon:'🔷', cls:'c1',
+        values:['หน้ากลม','หน้าไข่','หน้าหัวใจ','หน้าสี่เหลี่ยม','หน้าสามเหลี่ยม','หน้าเพชร','หน้ายาวรี','หน้าสามเหลี่ยมกลับ','หน้าแคบยาว','หน้าป้านกว้าง'] },
+      { key:'eye_shape', label:'รูปทรงตา', icon:'👁️', cls:'c4',
+        values:['ตาคม','ตากลมโต','ตาเหลี่ยม','ตาตี่','ตาชายตก','ตาชายขึ้น','ตาลึก','ตาโปน','ตาครึ่งเดือน','ตาอัลมอนด์','ตาแคบยาว','ตาเด็ก (wide-eyed)','ตาแมว','ตาเหยี่ยว'] },
+      { key:'eye_color', label:'สีตา', icon:'🌈', cls:'c4',
+        values:['น้ำตาลเข้ม','น้ำตาลอ่อน','อำพัน','เฮเซล','เขียวมรกต','เขียวอ่อน','ฟ้าน้ำแข็ง','ฟ้าเข้ม','เทาเงิน','ม่วงลาเวนเดอร์','แดง (albino)','ทองคำ','เงิน','ดำสนิท','ส้ม','ฟ้าเรืองแสง','ทอง+เขียว (หลายสี)','ตาสองสีต่างกัน'] },
+      { key:'eye_size', label:'ขนาดตา', icon:'🔍', cls:'c4',
+        values:['ตาโตมาก','ตาโตปานกลาง','ตาเล็กกลม','ตาเล็กแคบ','ตาขนาดกลาง'] },
+      { key:'eyebrow', label:'คิ้ว', icon:'〰️', cls:'c2',
+        values:['คิ้วหนาตรง','คิ้วบางโค้ง','คิ้วหนาโค้ง','คิ้วตรงเหลี่ยม','คิ้วชัน (ดุ)','คิ้วลาดลง (อ่อนโยน)','คิ้วบางมาก','คิ้วสั้นตัด','คิ้วธนู','คิ้วเชื่อม (unibrow)','คิ้วขาด/แผลเป็น','คิ้วสีต่างจากผม'] },
+      { key:'nose', label:'จมูก', icon:'👃', cls:'c1',
+        values:['จมูกโด่งสูง','จมูกตรงเล็ก','จมูกกลม','จมูกกว้าง','จมูกเชิด','จมูกยาวแหลม','จมูกเล็กกระเดียด','จมูกสั้นป้าน','จมูกคม','จมูกโด่งพอดี'] },
+      { key:'mouth', label:'ปาก', icon:'👄', cls:'c3',
+        values:['ปากบางกว้าง','ปากอวบเล็ก','ปากอวบใหญ่','ปากริมฝีบางทั้งคู่','ริมฝีบนบางล่างอวบ','ริมฝีบนอวบล่างบาง','ปากเล็กกระจุ๋มกระจิ๋ม','ปากยิ้มตลอด','ปากดุ (ปลายลง)','ปากกว้างมาก','ปากแผลเป็น/แตก'] },
+      { key:'jaw', label:'กราม/คาง', icon:'📐', cls:'c6',
+        values:['กรามคม','กรามกว้างสี่เหลี่ยม','คางแหลม','คางกลม','คางคู่','กรามแคบ','คางยื่น','คางหายไป (เล็กมาก)','กรามตัวV','กรามบึกบึน'] },
+      { key:'ear', label:'หู', icon:'👂', cls:'c8',
+        values:['หูปกติ','หูแหลมยาว (เอลฟ์)','หูแหลมสั้น','หูกระต่าย','หูแมว','หูสัตว์อื่น','หูใหญ่ยื่น','หูเล็กติดหัว','หูมีเครื่องประดับ','หูไม่สมมาตร'] },
+    ]
+  },
+  {
+    id: 'hair', label: '💇 ผม', traits: [
+      { key:'hair_length', label:'ความยาวผม', icon:'📏', cls:'c2',
+        values:['โกนหัว','ผมสั้นเกรียน (1-2 ซม.)','ผมสั้นมาก (ถึงใบหู)','ผมสั้น (ถึงคาง)','บ็อบ (ถึงคอ)','ผมกลาง (ถึงไหล่)','ผมกลาง (ถึงกลางหลัง)','ผมยาว (ถึงเอว)','ผมยาวมาก (ถึงก้น)','ผมยาวพิเศษ (ถึงพื้น)'] },
+      { key:'hair_style', label:'ทรงผม', icon:'💇', cls:'c2',
+        values:['ปล่อยตรง','ปล่อยลอน','ปล่อยหยิก','ปล่อยฟู','หางม้าสูง','หางม้าต่ำ','สองหางม้า','มัดสูง (bun)','มวยต่ำ','เปียเดี่ยว','สองเปีย','เปียฝรั่ง','เปียข้าง','ผมปัดข้าง','ทรงอันเดอร์คัต','ทรงเฟด','อาฟโร่','เดรดล็อก','หัวโกนบางส่วน','ผมทรงซามูไร','ทรงหน้าม้า (bang)','ผมทรง wolf cut','ผมทรง butterfly cut'] },
+      { key:'hair_texture', label:'เนื้อผม', icon:'🌀', cls:'c2',
+        values:['ผมตรงเรียบ','ผมตรงพอง','ผมลอนเล็ก','ผมลอนใหญ่','ผมหยิกกระชับ','ผมหยิกฟู','ผมหยิกสปริง','ผมแข็งตั้ง','ผมบางนุ่ม','ผมหนาหยาบ'] },
+      { key:'hair_color', label:'สีผม', icon:'🎨', cls:'c3',
+        values:['ดำเงา','น้ำตาลเข้ม','น้ำตาลธรรมชาติ','น้ำตาลทอง','บลอนด์อ่อน','บลอนด์ทอง','แดงเลือดหมู','แดงสด','ส้มสด','ชมพูพาสเทล','ชมพูฟูเชีย','ม่วงลาเวนเดอร์','ม่วงเข้ม','น้ำเงินไฟฟ้า','ฟ้าอ่อน','เขียวมรกต','เขียวมิ้นต์','ขาวเงิน','เทาเงิน','ทองคำสด','รุ้ง (ombre)','ดำปลายสีอื่น','สองสีตัดกัน','ตามธรรมชาติแต่มีไฮไลท์'] },
+      { key:'hair_extra', label:'ลักษณะพิเศษผม', icon:'✨', cls:'c3',
+        values:['ไม่มีพิเศษ','ผมมีประกายแสง','ผมดูเหมือนลอย','ผมมีเส้นสีต่าง','ผมมีดอกไม้/ใบไม้','ผมมีเครื่องประดับ','ผมเปียกเสมอ','ผมไฟ (flame hair)','ผมน้ำ (water hair)','ผมมีดาว/กลิตเตอร์'] },
+    ]
+  },
+  {
+    id: 'body', label: '🏃 ร่างกาย', traits: [
+      { key:'height', label:'ส่วนสูง', icon:'📏', cls:'c6',
+        values:['เตี้ยมาก (ต่ำกว่า 145 ซม.)','เตี้ย (145-154 ซม.)','ค่อนข้างเตี้ย (155-162 ซม.)','กลาง (163-170 ซม.)','ค่อนข้างสูง (171-179 ซม.)','สูง (180-187 ซม.)','สูงมาก (188-195 ซม.)','สูงพิเศษ (196+ ซม.)'] },
+      { key:'build', label:'รูปร่าง', icon:'🏃', cls:'c5',
+        values:['ผอมมาก (กระดูกเห็น)','ผอมเล็กบาง','ผอมสูง','ผอมธรรมดา','เฟรมเล็กกล้ามน้อย','หุ่นนักกีฬา (ผอมแต่มีกล้าม)','กล้ามเนื้อพอดี','กล้ามเนื้อปานกลาง','กล้ามเนื้อมาก','กล้ามมากมาก (bodybuilder)','อ้วนน้อย (chubby)','อ้วนกลม','อ้วนสูง','อ้วนมีกล้าม','หุ่นอวบ (plus size)'] },
+      { key:'proportion', label:'สัดส่วน', icon:'⚖️', cls:'c5',
+        values:['สัดส่วนปกติ','หัวโต ตัวเล็ก (chibi-like)','ขายาวมาก','แขนยาวมาก','ลำตัวยาว ขาสั้น','ไหล่กว้าง สะโพกแคบ','ไหล่แคบ สะโพกกว้าง','เอวคอด (hourglass)','สัดส่วนสี่เหลี่ยม','หัวเล็ก ตัวใหญ่'] },
+      { key:'skin_color', label:'สีผิว', icon:'🎨', cls:'c1',
+        values:['ขาวซีดมาก','ขาวนวล','ขาวอมชมพู','งาช้าง','ครีมอ่อน','แทนอ่อน','แทนธรรมชาติ','น้ำผึ้ง','ทองแดง','น้ำตาลอ่อน','น้ำตาลกลาง','น้ำตาลเข้ม','ช็อกโกแลต','ดำเอบอง','มะกอก','เทาเงิน (fantasy)','ฟ้าอ่อน (fantasy)','ม่วงอ่อน (fantasy)','เขียวอ่อน (orc)','ทอง/เมทัลลิก'] },
+      { key:'skin_texture', label:'ลักษณะผิว', icon:'💎', cls:'c1',
+        values:['ผิวเรียบ','ผิวมีรอยแผลเป็น','ผิวมีรอยสัก','ผิวมีฝ้า/กระ','ผิวมีลวดลายธรรมชาติ','ผิวแตกร้าว (golem)','ผิวระยิบ (glitter)','ผิวมีเกล็ด','ผิวโปร่งแสง','ผิวมีลายดาว','ผิวเรืองแสง'] },
+    ]
+  },
+  {
+    id: 'identity', label: '⚧️ ตัวตน', traits: [
+      { key:'gender_expression', label:'การแสดงออกทางเพศ', icon:'⚧️', cls:'c7',
+        values:['ชายบึกบึน','ชายธรรมดา','ชายอ่อนหวาน','ชาย-กลาง (androgynous)','กลาง (neutral)','หญิง-กลาง (androgynous)','หญิงธรรมดา','หญิงสาวเท่','femboy','tomboy','drag-style','non-binary แบบ edgy'] },
+      { key:'age_range', label:'ช่วงอายุ', icon:'🎂', cls:'c8',
+        values:['เด็ก (6-10)','เด็กโต (11-12)','วัยรุ่นตอนต้น (13-15)','วัยรุ่น (16-17)','ผู้ใหญ่ตอนต้น (18-22)','ผู้ใหญ่ (23-29)','วัยทำงาน (30-39)','วัยกลางคน (40-50)','สูงวัย (51-65)','ชราภาพ (66-80)','แก่มาก (80+)','อายุไม่แน่นอน (เอลฟ์/ปีศาจ)'] },
+      { key:'race', label:'เผ่าพันธุ์', icon:'🌟', cls:'c7',
+        values:['มนุษย์','เอลฟ์ป่า','เอลฟ์ดาว','ดาร์คเอลฟ์','ฮาล์ฟเอลฟ์','ดวาร์ฟ','ออร์ค','ฮาล์ฟออร์ค','ปีศาจ/เดมอน','เทวดา/เซราฟ','มังกร/มนุษย์มังกร','แวมไพร์','ซอมบี้','หมาป่า','แมว (neko)','กระต่าย (usagi)','จิ้งจอก (kitsune)','เมอร์เมด','แฟร์รี่','กอบลิน','ยักษ์','นาค','ฟีนิกซ์','ไซบอร์ก','แอนดรอยด์'] },
+    ]
+  },
+  {
+    id: 'outfit', label: '👗 ชุดแต่งกาย', traits: [
+      { key:'outfit_style', label:'สไตล์ชุด', icon:'👗', cls:'c9',
+        values:['ชุดนักเรียน','ชุดยูนิฟอร์มทหาร/ตำรวจ','ชุดเกราะอัศวิน','ชุดนักเวทย์','ชุดโจรสลัด','ชุดสตรีท/ลำลอง','ชุดสูทธุรกิจ','ชุดดำทั้งตัว','ชุดดั้งเดิมญี่ปุ่น (kimono/yukata)','ชุดดั้งเดิมจีน (hanfu/qipao)','ชุดดั้งเดิมไทย','ชุดเดรสแฟนตาซี','ชุดนินจา','ชุดหมอ/นักวิทยาศาสตร์','ชุดราชวงศ์/เจ้าชาย-หญิง','ชุดนักดนตรี/ร็อค','ชุดพยาบาล','ชุดกีฬา','ชุดเอาท์ดอร์/นักล่า','ชุด gothic lolita','ชุด cyberpunk','ชุด cottagecore','ชุดชาวบ้าน/เกษตร','ชุดกันหนาว/ฮูดดี้'] },
+      { key:'outfit_color', label:'โทนสีชุด', icon:'🎨', cls:'c9',
+        values:['ดำล้วน','ขาวล้วน','แดง','น้ำเงิน','เขียว','ม่วง','เทา','ทอง','เงิน','น้ำตาล','ชมพู','ส้ม','ฟ้า','เหลือง','หลายสีสดใส','พาสเทล','monochrome','สีดินธรรมชาติ','ขาว+ทอง','ดำ+แดง'] },
+      { key:'outfit_extra', label:'อุปกรณ์เสริม', icon:'⚔️', cls:'c10',
+        values:['ไม่มี','ดาบ','โล่','คันธนู','ไม้เท้าเวทย์','หอก','ปืน','มีด','หมวก','ผ้าคลุม/เคป','ผ้าพันคอ','แว่นตา','แว่น VR','กุญแจมือ','โซ่','ปีก','หู+หาง','มงกุฎ','หน้ากาก','หมวกสวมหู'] },
+    ]
+  },
+  {
+    id: 'personality', label: '💬 บุคลิก', traits: [
+      { key:'personality_type', label:'บุคลิกหลัก', icon:'💬', cls:'c10',
+        values:['เงียบขรึม ลึกลับ','ร่าเริง พูดมาก','เย็นชา ไม่สนใจ','ดุดัน ก้าวร้าว','อ่อนโยน ใจดี','ซนป่วน ขี้เล่น','จริงจัง ตรงไปตรงมา','ขี้อาย เก็บตัว','กล้าหาญ เป็นผู้นำ','เด็กในร่างโต','นักปรัชญา','โรแมนติก เพ้อฝัน','ขี้สงสัย ชอบสืบ','เสียดสี ประชด','ซื่อบื้อ ตรงไปตรงมา','มึนงง เหม่อลอย','เจ้าชู้','หัวร้อน โมโหง่าย','แคลคูเลเตอร์ ชอบวางแผน','โหดเย็น ไร้ความปราณี'] },
+      { key:'expression', label:'สีหน้าประจำ', icon:'😶', cls:'c10',
+        values:['หน้าตาย (poker face)','ยิ้มตลอด','หน้าบึ้ง','หน้าสงสัย','หน้าเบื่อ','หน้าตื่นเต้น','หน้าเศร้า','หน้าโมโห','หน้าเย็นชา','หน้ายิ้มข้างเดียว','หน้าอมยิ้ม','หน้าซนขี้เล่น','หน้าเหนื่อย'] },
+    ]
+  },
+  {
+    id: 'special', label: '✨ พิเศษ', traits: [
+      { key:'special_mark', label:'จุดเด่นร่างกาย', icon:'✨', cls:'c11',
+        values:['ไม่มี','รอยแผลเป็นที่ใบหน้า','รอยแผลเป็นทั่วร่าง','รอยสักที่แขน','รอยสักเต็มหลัง','ตาเรืองแสง','ผิวมีลวดลาย','รอยประทับเวทมนตร์','ขาเทียม','แขนไซบอร์ก','ตาไซบอร์ก','มีเขา','มีหาง','มีปีก','มีครีบ','ผมลอยในอากาศ','ร่างกายโปร่งแสงบางส่วน','ไม่มีเงา','ตาสามดวง','มีออร่ารอบกาย'] },
+      { key:'power_vibe', label:'พลัง/ออร่า', icon:'⚡', cls:'c11',
+        values:['ไม่มีพลัง (มนุษย์ธรรมดา)','ไฟ','น้ำ/น้ำแข็ง','ลม/พายุ','ดิน/หิน','สายฟ้า','แสง/เวทย์มนตร์','ความมืด/เงา','เวลา/อวกาศ','ธรรมชาติ/พฤกษา','เลือด','พิษ','เสียง','จิตใจ/โทรจิต','ความตาย/necromancy','การสร้าง/ก่อสร้าง','กายภาพล้วน (พลังกาย)','รวมหลายธาตุ'] },
+    ]
+  }
+];
+
+let currentValues = {};
+let isSpinning = false;
+
+// Draw wheel
+const canvas = document.getElementById('wheel-canvas');
+const ctx = canvas.getContext('2d');
+const WHEEL_COLORS = ['#9b6dff','#ff6eb4','#4ddde0','#f5c842','#6bffb8','#ff9f4a','#e473ff','#7ec8ff','#b8ff6e','#ffb347','#ff7070','#70c8ff','#9b6dff','#ff6eb4'];
+let wheelAngle = 0;
+let wheelAnim = null;
+const allTraits = CATEGORIES.flatMap(c => c.traits);
+
+function drawWheel(angle) {
+  const cx = 100, cy = 100, r = 94;
+  const slices = CATEGORIES.length;
+  const arc = (Math.PI * 2) / slices;
+  ctx.clearRect(0, 0, 200, 200);
+  ctx.save();
+  ctx.shadowColor = '#9b6dff';
+  ctx.shadowBlur = 16;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r + 2, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(155,109,255,0.35)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+  for (let i = 0; i < slices; i++) {
+    const start = angle + i * arc;
+    const end = start + arc;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+    ctx.globalAlpha = 0.82;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = '#0d0b1a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(start + arc / 2);
+    ctx.translate(r * 0.6, 0);
+    ctx.rotate(-start - arc / 2 - angle);
+    ctx.font = '13px serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(CATEGORIES[i].label.split(' ')[0], 0, 0);
+    ctx.restore();
+  }
+  ctx.beginPath();
+  ctx.arc(cx, cy, 18, 0, Math.PI * 2);
+  ctx.fillStyle = '#0d0b1a';
+  ctx.fill();
+  ctx.strokeStyle = '#2e2855';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+drawWheel(0);
+
+function animateWheel(duration, endAngle, onDone) {
+  const start = performance.now();
+  const startAngle = wheelAngle;
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - t, 4);
+    wheelAngle = startAngle + (endAngle - startAngle) * ease;
+    drawWheel(wheelAngle);
+    if (t < 1) { wheelAnim = requestAnimationFrame(frame); }
+    else { wheelAngle = endAngle; drawWheel(endAngle); onDone && onDone(); }
+  }
+  wheelAnim = requestAnimationFrame(frame);
+}
+
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+function buildLayout() {
+  const container = document.getElementById('traits-container');
+  container.innerHTML = '';
+  CATEGORIES.forEach(cat => {
+    const group = document.createElement('div');
+    group.className = 'cat-group';
+    group.id = `group-${cat.id}`;
+    const title = document.createElement('div');
+    title.className = 'cat-group-title';
+    title.textContent = cat.label;
+    group.appendChild(title);
+    const grid = document.createElement('div');
+    grid.className = 'traits-grid';
+    cat.traits.forEach(t => {
+      const card = document.createElement('div');
+      card.className = `trait-card ${t.cls}`;
+      card.id = `card-${t.key}`;
+      card.innerHTML = `
+        <div class="trait-icon">${t.icon}</div>
+        <div class="trait-info">
+          <div class="trait-label">${t.label}</div>
+          <div class="trait-value" id="val-${t.key}">—</div>
+        </div>
+        <button class="reroll-btn" title="สุ่มใหม่" onclick="rerollOne('${t.key}')">↻</button>
+      `;
+      grid.appendChild(card);
+    });
+    group.appendChild(grid);
+    container.appendChild(group);
+  });
+}
+
+function rerollOne(key) {
+  const t = allTraits.find(x => x.key === key);
+  if (!t) return;
+  const card = document.getElementById(`card-${key}`);
+  card.classList.add('spinning');
+  let count = 0;
+  const iv = setInterval(() => {
+    document.getElementById(`val-${key}`).textContent = pick(t.values);
+    count++;
+    if (count >= 12) {
+      clearInterval(iv);
+      const val = pick(t.values);
+      currentValues[key] = val;
+      document.getElementById(`val-${key}`).textContent = val;
+      card.classList.remove('spinning');
+    }
+  }, 60);
+}
+
+function spinAll() {
+  if (isSpinning) return;
+  isSpinning = true;
+  const btn = document.getElementById('spin-btn');
+  btn.disabled = true;
+
+  const spins = 4 + Math.random() * 3;
+  const endAngle = wheelAngle + spins * Math.PI * 2 + Math.random() * Math.PI * 2;
+  if (wheelAnim) cancelAnimationFrame(wheelAnim);
+  animateWheel(2200, endAngle, () => {});
+
+  buildLayout();
+  document.getElementById('result-section').classList.add('visible');
+
+  allTraits.forEach((t, i) => {
+    let count = 0;
+    const total = 12 + Math.floor(Math.random() * 8);
+    setTimeout(() => {
+      const card = document.getElementById(`card-${t.key}`);
+      if (!card) return;
+      card.classList.add('spinning');
+      const iv = setInterval(() => {
+        const el = document.getElementById(`val-${t.key}`);
+        if (el) el.textContent = pick(t.values);
+        count++;
+        if (count >= total) {
+          clearInterval(iv);
+          const val = pick(t.values);
+          currentValues[t.key] = val;
+          if (el) el.textContent = val;
+          card.classList.remove('spinning');
+          if (i === allTraits.length - 1) {
+            isSpinning = false;
+            btn.disabled = false;
+            spawnParticles();
+          }
+        }
+      }, 65);
+    }, i * 35);
+  });
+}
+
+function spawnParticles() {
+  const cols = ['#9b6dff','#ff6eb4','#4ddde0','#f5c842','#6bffb8','#ff9f4a'];
+  const btn = document.getElementById('spin-btn');
+  const rect = btn.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  for (let i = 0; i < 32; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 5 + Math.random() * 9;
+    const dx = (Math.random() - 0.5) * 220;
+    const dy = -70 - Math.random() * 170;
+    p.style.cssText = `left:${cx}px;top:${cy}px;width:${size}px;height:${size}px;background:${cols[Math.floor(Math.random()*cols.length)]};--dx:${dx}px;--dy:${dy}px;animation-delay:${Math.random()*0.3}s;animation-duration:${0.8+Math.random()*0.6}s;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1600);
+  }
+}
+
+function showSheet() {
+  const lines = ['✦ CHARACTER SHEET ✦', ''];
+  CATEGORIES.forEach(cat => {
+    lines.push(`── ${cat.label} ──`);
+    cat.traits.forEach(t => {
+      const val = currentValues[t.key] || '—';
+      lines.push(`  ${t.icon} ${t.label} : ${val}`);
+    });
+    lines.push('');
+  });
+  document.getElementById('sheet-text').textContent = lines.join('\n');
+  document.getElementById('modal').classList.add('open');
+}
+
+function copySheet() {
+  const text = document.getElementById('sheet-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const el = document.getElementById('copy-done');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 2000);
+  });
+}
+
+function closeModal(e) {
+  if (e.target.id === 'modal') document.getElementById('modal').classList.remove('open');
+}
+</script>
+</body>
+</html>
