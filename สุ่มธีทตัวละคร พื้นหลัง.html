@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>วงล้อสุ่มธีมวาดรูป</title>
+<style>
+  :root{--bg:#141414;--ink:#e8e0d8;--accentA:#ff6b35;--accentB:#3a9fd4;--line:#444;}
+  *{box-sizing:border-box;}
+  body{margin:0;min-height:100vh;background:var(--bg);font-family:'Trebuchet MS','Segoe UI',sans-serif;color:var(--ink);display:flex;flex-direction:column;align-items:center;padding:24px 16px 50px;}
+  h1{font-size:1.4rem;margin:8px 0 4px;text-align:center;}
+  p.sub{margin:0 0 24px;opacity:.7;font-size:.88rem;text-align:center;}
+  .columns{display:flex;flex-wrap:wrap;gap:36px;justify-content:center;width:100%;max-width:1100px;}
+  .col{display:flex;flex-direction:column;align-items:center;width:360px;max-width:92vw;}
+  .col h2{font-size:1.1rem;margin:0 0 14px;}
+  .col.A h2{color:var(--accentA);}
+  .col.B h2{color:var(--accentB);}
+  .wheel-wrap{position:relative;width:280px;height:280px;max-width:80vw;margin-bottom:18px;}
+  .pointer{position:absolute;top:-10px;left:50%;transform:translateX(-50%);width:0;height:0;border-left:13px solid transparent;border-right:13px solid transparent;z-index:5;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25));}
+  .col.A .pointer{border-top:22px solid var(--accentA);}
+  .col.B .pointer{border-top:22px solid var(--accentB);}
+  canvas{width:100%;height:100%;border-radius:50%;box-shadow:0 0 0 5px var(--line),0 6px 16px rgba(0,0,0,.25);transition:transform 4.5s cubic-bezier(.17,.67,.21,1);}
+  .hub{position:absolute;top:50%;left:50%;width:16%;height:16%;transform:translate(-50%,-50%);border-radius:50%;border:3px solid var(--line);z-index:4;}
+  .col.A .hub{background:var(--accentA);}
+  .col.B .hub{background:var(--accentB);}
+  button.spin{font-family:inherit;font-size:1rem;font-weight:bold;padding:10px 28px;border-radius:999px;border:3px solid var(--line);color:#fff;cursor:pointer;transition:transform .08s;}
+  .col.A button.spin{background:var(--accentA);box-shadow:0 4px 0 var(--line);}
+  .col.B button.spin{background:var(--accentB);box-shadow:0 4px 0 var(--line);}
+  button.spin:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line);}
+  button.spin:disabled{opacity:.6;cursor:not-allowed;}
+  .result{margin-top:14px;min-height:2.8rem;font-size:.95rem;font-weight:bold;text-align:center;padding:0 6px;line-height:1.4;}
+  .col.A .result{color:var(--accentA);}
+  .col.B .result{color:var(--accentB);}
+  .panel{margin-top:18px;width:100%;background:#1e1e1e;border:2px solid var(--line);border-radius:14px;padding:12px 14px;}
+  details summary{font-size:.85rem;font-weight:bold;cursor:pointer;user-select:none;margin-bottom:6px;color:#aaa;}
+  textarea{width:100%;min-height:130px;font-family:inherit;font-size:.75rem;border:1px solid #444;border-radius:8px;padding:8px;resize:vertical;background:#2a2a2a;color:#e8e0d8;}
+  .panel-actions{display:flex;gap:8px;margin-top:8px;}
+  .panel-actions button{font-size:.75rem;padding:6px 12px;border-radius:999px;border:2px solid #555;cursor:pointer;background:#2e2e2e;color:#e8e0d8;box-shadow:0 3px 0 #000;}
+  .panel-actions button:active{box-shadow:0 1px 0 #000;transform:translateY(2px);}
+  .combo-box{margin-top:30px;text-align:center;background:#1e1e1e;border:2.5px solid #444;border-radius:14px;padding:14px 20px;max-width:620px;width:90vw;}
+  .combo-box .label{font-size:.8rem;opacity:.6;margin-bottom:6px;}
+  .combo-box .combo-text{font-size:1rem;font-weight:bold;line-height:1.7;min-height:2rem;white-space:pre-line;}
+</style>
+</head>
+<body>
+<h1>🎨 วงล้อสุ่มธีมวาดรูป</h1>
+<p class="sub">หมุนสองวงล้อแยกกัน แล้วเอามาผสมเป็นไอเดียเดียว</p>
+<div class="columns">
+  <div class="col A">
+    <h2>🧍 ธีมตัวละคร (100)</h2>
+    <div class="wheel-wrap"><div class="pointer"></div><canvas id="wheelA" width="600" height="600"></canvas><div class="hub"></div></div>
+    <button class="spin" id="spinA">หมุน 🎲</button>
+    <div class="result" id="resultA"></div>
+    <div class="panel"><details><summary>✏️ แก้ไขรายการ</summary><textarea id="boxA"></textarea><div class="panel-actions"><button id="saveA">บันทึก</button><button id="resetA">รีเซ็ต</button></div></details></div>
+  </div>
+  <div class="col B">
+    <h2>🏞️ ธีมพื้นหลัง (100)</h2>
+    <div class="wheel-wrap"><div class="pointer"></div><canvas id="wheelB" width="600" height="600"></canvas><div class="hub"></div></div>
+    <button class="spin" id="spinB">หมุน 🎲</button>
+    <div class="result" id="resultB"></div>
+    <div class="panel"><details><summary>✏️ แก้ไขรายการ</summary><textarea id="boxB"></textarea><div class="panel-actions"><button id="saveB">บันทึก</button><button id="resetB">รีเซ็ต</button></div></details></div>
+  </div>
+</div>
+<div class="combo-box">
+  <div class="label">💡 ไอเดียผสม (หมุนทั้งสองวงล้อ)</div>
+  <div class="combo-text" id="comboText">—</div>
+</div>
+
+<script>
+const defaultCharacters = [
+  // 🎮 เกม
+  "ตัวละครจาก Warframe",
+  "ผู้รอดชีวิตจาก Fallout 4",
+  "นักสร้างจาก Minecraft",
+  "นักรบจาก Fortnite",
+  "นักล่าจาก Monster Hunter",
+  "ซามูไรจาก Ghost of Tsushima",
+  "อัศวินจาก Elden Ring",
+  "นักรบจาก Dark Souls",
+  "Link จาก The Legend of Zelda",
+  "Geralt จาก The Witcher 3",
+  "นักรบจาก Overwatch 2",
+  "แชมเปี้ยนจาก League of Legends",
+  "นักฆ่าจาก Assassin's Creed",
+  "นักสู้จาก Street Fighter 6",
+  "ตัวละครจาก Genshin Impact",
+  "Kratos จาก God of War",
+  "V จาก Cyberpunk 2077",
+  "นักสู้จาก Mortal Kombat",
+  "ตัวละครจาก GTA V",
+  "Arthur Morgan จาก Red Dead Redemption 2",
+  "Joel จาก The Last of Us",
+  "Doom Slayer จาก DOOM Eternal",
+  "Master Chief จาก Halo",
+  "ตัวละครจาก Apex Legends",
+  "นักสำรวจจาก Hollow Knight",
+  // 📺 อนิเมะ
+  "นักเรียนจาก My Hero Academia",
+  "นินจาจาก นารูโตะ นินจาจอมคาถา",
+  "นักล่าจาก ดาบพิฆาตอสูร",
+  "โจรสลัดจาก One Piece",
+  "นักสู้จาก Dragon Ball Z",
+  "นักเรียนจาก Jujutsu Kaisen",
+  "นักเวทย์จาก Sailor Moon",
+  "นักล่าวิญญาณจาก Bleach",
+  "ทหารจาก Attack on Titan",
+  "นักบินจาก Neon Genesis Evangelion",
+  "แอลจาก Death Note",
+  "นักเดินทางจาก Fullmetal Alchemist",
+  "สายลับจาก Spy x Family",
+  "นักสู้จาก Sword Art Online",
+  "นักล่าจาก Hunter x Hunter",
+  "ตัวละครจาก Kaiju No. 8",
+  "นักล่าจาก Chainsaw Man",
+  "ตัวละครจาก Re:Zero",
+  "นักเวทย์จาก Fairy Tail",
+  "โจรสลัดจาก Black Clover",
+  "ตัวละครจาก Tower of God",
+  "นักรบจาก Vinland Saga",
+  "ตัวละครจาก Frieren",
+  "นักสำรวจจาก Made in Abyss",
+  "นักรบจาก Berserk",
+  // 🎬 หนัง / ซีรีส์
+  "นักบินอวกาศจาก Interstellar",
+  "ยอดมนุษย์จาก Avengers",
+  "นักเวทย์จาก Harry Potter",
+  "Jedi จาก Star Wars",
+  "Sherlock Holmes",
+  "Spider-Man",
+  "Joker",
+  "Indiana Jones",
+  "อัศวินจาก The Lord of the Rings",
+  "Neo จาก The Matrix",
+  "นักบินหุ่นยนต์จาก Pacific Rim",
+  "Deadpool",
+  "John Wick",
+  "นักรบจาก 300",
+  "ตัวละครจาก Blade Runner 2049",
+  "Ellen Ripley จาก Alien",
+  "กัปตันจาก Pirates of the Caribbean",
+  "ตัวละครจาก The Hunger Games",
+  "ตัวละครจาก Mad Max: Fury Road",
+  "ตัวละครจาก Dune",
+  "แวมไพร์จาก Interview with the Vampire",
+  "นักสู้จาก The Dark Knight",
+  "นักสำรวจจาก Jurassic Park",
+  "ตัวละครจาก Oppenheimer",
+  "ตัวละครจาก Everything Everywhere All at Once",
+  // ⚔️ แฟนตาซี / ตำนาน / อื่นๆ
+  "เทพเจ้ากรีก Zeus",
+  "Thor เทพนอร์ส",
+  "เทพอียิปต์ Anubis",
+  "Dracula เคานต์แวมไพร์",
+  "เอลฟ์นักธนูหูแหลม",
+  "ดวาร์ฟช่างตีเหล็ก",
+  "มังกรในร่างมนุษย์",
+  "นางเงือกใต้ทะเลลึก",
+  "นักรบไวกิ้ง",
+  "ผีสางกิโมโนญี่ปุ่น",
+  "พระภิกษุพุทธในป่า",
+  "เทวทูต Seraphim ปีกหก",
+  "หมอผีชนเผ่าอเมริกัน",
+  "เทพธิดาดวงจันทร์",
+  "ฤๅษีฮินดูผู้ทรงพลัง",
+  "มัมมี่ฟาโรห์เพิ่งตื่น",
+  "แม่มดฮาโลวีนสุดคลาสสิก",
+  "นักล่าเงินรางวัยสไตล์ตะวันตก",
+  "โจรสลัดอวกาศ Cowboy Bebop",
+  "นักสู้จาก Mortal Engines",
+  "นักล่าซอมบี้ The Walking Dead",
+  "ตัวละครจาก Stranger Things",
+  "ตัวละครจาก Arcane",
+  "ตัวละครจาก Castlevania",
+  "ตัวละครจาก Invincible"
+];
+
+const defaultBackgrounds = [
+  // 🎮 เกม
+  "เมือง Minecraft ขนาดยักษ์บนยอดเขา",
+  "แผนที่ Fortnite หลังพายุหดลง",
+  "ป้อม Dark Souls ในหมอกยามค่ำ",
+  "ทุ่งหญ้า Elden Ring สายลมพัดทุ่งนา",
+  "เมืองกลางคืน Cyberpunk 2077 นีออนฉ่ำ",
+  "ทุ่งหญ้า Hyrule จาก Zelda",
+  "ดาวเคราะห์ No Man's Sky หลายพระอาทิตย์",
+  "เมืองใต้น้ำ Rapture จาก BioShock",
+  "Los Santos จาก GTA V ยามพระอาทิตย์ตก",
+  "ทุ่งหญ้า Red Dead Redemption 2 ตะวันตก",
+  "บอสตันรกร้าง Fallout 4",
+  "เมืองร้าง The Last of Us ต้นไม้รุกราน",
+  "ดินแดนนอร์ส God of War",
+  "เมือง Overwatch หลังสงคราม",
+  "ดาวเคราะห์ Mass Effect หน้าผาสูง",
+  "เหมือง Hollow Knight ใต้ดินลึก",
+  "สวรรค์ Ori and the Blind Forest สีสันจัด",
+  "แผนที่ Apex Legends สนามรบ",
+  "เมือง Valorant ถูกทำลาย",
+  "สนามรบ League of Legends ป่ากลางวัน",
+  // 📺 อนิเมะ
+  "กำแพงเมือง Attack on Titan สูงชัน",
+  "หมู่บ้านยุคไทโช Demon Slayer",
+  "เกาะ One Piece พืชประหลาด",
+  "สนามรบ Dragon Ball Z ซากปรัก",
+  "โรงเรียน U.A. High จาก My Hero Academia",
+  "ตลาดวิญญาณ Spirited Away",
+  "เมืองโตเกียว-3 จาก Evangelion",
+  "ทุ่งดอกไม้ Studio Ghibli",
+  "หมู่บ้านโคโนฮะ จาก นารูโตะ",
+  "Soul Society จาก Bleach",
+  "โตเกียวกลางคืน Jujutsu Kaisen",
+  "ดันเจี้ยน Sword Art Online",
+  "เมืองอนาคต Code Geass",
+  "อาณาจักร Fairy Tail",
+  "หุบเขา Made in Abyss ลึกลับ",
+  "เมือง Frieren ยุคหลังสงคราม",
+  "ดินแดน Berserk ป่ามืดทมิฬ",
+  "เมือง Arcane Zaun ใต้ดิน",
+  "ปราสาท Castlevania ยามค่ำ",
+  "สนามรบ Vinland Saga ชายฝั่งนอร์ส",
+  // 🎬 หนัง / ซีรีส์
+  "ยานอวกาศ Interstellar ใกล้หลุมดำ",
+  "Gotham City กลางคืนฝนตก",
+  "ป่า Pandora Avatar เรืองแสง",
+  "ถนน Mad Max ทะเลทรายพายุฝุ่น",
+  "ปราสาท Hogwarts Harry Potter",
+  "ดาว Tatooine Star Wars สองพระอาทิตย์",
+  "เมือง Wakanda Black Panther",
+  "สนามรบ Narnia หิมะขาว",
+  "New York Avengers บุกรุกเอเลี่ยน",
+  "Mordor จาก Lord of the Rings",
+  "รีสอร์ท Jurassic Park ก่อนหายนะ",
+  "เมือง Blade Runner 2049 กลางคืนฝน",
+  "ท่าเรือ Pacific Rim ก่อนKaiju บุก",
+  "ยานอวกาศ Alien มืดทะมึน",
+  "เมือง Dune ทะเลทรายอาร์ราคิส",
+  "ทุ่งหญ้า The Hunger Games Arena",
+  "เมือง Everything Everywhere มิติต่างๆ",
+  "ห้องทดลอง Oppenheimer กลางทะเลทราย",
+  "ป่า The Revenant หิมะหนาว",
+  "เมือง Tron Legacy ดิจิทัล",
+  // ⚔️ แฟนตาซี / ตำนาน
+  "ปราสาทลอยฟ้ากลางเมฆ",
+  "ป่าเวทมนตร์ต้นไม้เรืองแสง",
+  "เมืองเอลฟ์ในต้นไม้ยักษ์",
+  "ดันเจี้ยนคริสตัลใต้ดิน",
+  "ถ้ำมังกรขุมทรัพย์ทอง",
+  "วิหารกรีกโบราณบนยอดผา",
+  "ปิรามิดอียิปต์ยามค่ำคืน",
+  "อาณาจักรใต้ทะเลลึก",
+  "สมรภูมิไวกิ้งหน้าผาทะเล",
+  "สวรรค์นอร์ส Asgard",
+  // ☯️ ศาสนา / วัฒนธรรม
+  "วัดป่าพุทธศาสนาหมอกเช้า",
+  "เจดีย์ทองแสงพระอาทิตย์ตก",
+  "โบสถ์โกธิคกลางป่าเถาวัลย์",
+  "มหาวิหารกระจกสีสว่างไสว",
+  "สโตนเฮนจ์พระอาทิตย์ขึ้น",
+  "มัสยิดโมรอคโคลวดลายกระเบื้อง",
+  "วัดชินโตซากุระบาน",
+  "แท่นบูชาเทพเจ้าป่าศักดิ์สิทธิ์",
+  // 🌿 ธรรมชาติ
+  "ทุ่งซากุระบาน Yoshino ญี่ปุ่น",
+  "ป่าฝน Amazon แสงรอดใบไม้",
+  "ออโรร่าเหนือยอดเขาหิมะ",
+  "ถ้ำน้ำแข็งขั้วโลกเรืองสีฟ้า",
+  "ทุ่งลาเวนเดอร์ฝรั่งเศสพระอาทิตย์ตก",
+  "ป่าไผ่กลางหมอกจีน",
+  "โอเอซิสทะเลทรายกลางคืนดาวเต็มฟ้า",
+  "ใต้มหาสมุทรลึกสิ่งมีชีวิตเรืองแสง",
+  // 🌆 เมือง / ไซเบอร์พังค์
+  "โตเกียว ชินจูกุ กลางคืนฝนโปรย",
+  "ตรอกเมืองเก่ายุโรปหินกรวด",
+  "ตลาดนัดกลางคืนเอเชียคึกคัก",
+  "สถานีรถไฟร้างเถาวัลย์ขึ้น",
+  "เมืองร้างหลังหายนะพืชคืนธรรมชาติ",
+  "ดาดฟ้าตึก 200 ชั้นเมืองอนาคต",
+  "สวนสนุกร้างกลางคืน",
+  "ห้องสมุดโบราณเพดานสูงหนังสือเต็ม",
+  "เวที Stranger Things Upside Down",
+  "อาณาจักรบนก้อนเมฆยักษ์",
+  "เวทีคอนเสิร์ตโฮโลแกรมอวกาศ",
+  "ซากอารยธรรมลึกลับใต้ทะเล"
+];
+
+const colorsA=['#ff6b35','#ff9b54','#f4845f','#ff5c8a','#d76fa9','#a06fd7','#7a6ff0','#f7b731','#e84393','#c0392b','#e67e22','#ff4757','#ff6348','#ffa502','#eccc68'];
+const colorsB=['#3a7ca5','#4cb5ae','#5fc9c9','#5f8ad7','#6fb8d7','#7fd1c1','#2ecc71','#1abc9c','#0984e3','#6c5ce7','#00b894','#0652dd','#4834d4','#686de0','#30336b'];
+
+function makeWheel(canvasId,storageKey,defaults,colors){
+  const canvas=document.getElementById(canvasId);
+  const ctx=canvas.getContext('2d');
+  let items=[],currentRotation=0,spinning=false;
+  function load(){try{const s=JSON.parse(localStorage.getItem(storageKey)||'null');items=(s&&s.length>=2)?s:defaults.slice();}catch(e){items=defaults.slice();}}
+  load();
+  function draw(){
+    const n=items.length,cx=canvas.width/2,cy=canvas.height/2,r=canvas.width/2-6;
+    const arc=(2*Math.PI)/n;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let i=0;i<n;i++){
+      const start=i*arc;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.arc(cx,cy,r,start,start+arc);ctx.closePath();
+      ctx.fillStyle=colors[i%colors.length];ctx.fill();
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(start+arc/2);
+      ctx.textAlign='right';ctx.fillStyle='rgba(255,255,255,0.95)';
+      ctx.font='bold 13px "Trebuchet MS",sans-serif';
+      const label=items[i].length>22?items[i].slice(0,21)+'…':items[i];
+      ctx.fillText(label,r-10,5);ctx.restore();
+    }
+  }
+  draw();
+  function spin(onDone){
+    if(spinning||items.length<2)return;
+    spinning=true;
+    const n=items.length,arc=360/n;
+    const winnerIndex=Math.floor(Math.random()*n);
+    const sliceCenterDeg=winnerIndex*arc+arc/2;
+    const extraSpins=5+Math.floor(Math.random()*3);
+    const baseTurns=Math.floor(currentRotation/360)+extraSpins;
+    const finalRotation=baseTurns*360+(270-sliceCenterDeg+360)%360;
+    canvas.style.transition='transform 4.5s cubic-bezier(.17,.67,.21,1)';
+    canvas.style.transform=`rotate(${finalRotation}deg)`;
+    currentRotation=finalRotation;
+    setTimeout(()=>{spinning=false;onDone(items[winnerIndex]);},4600);
+  }
+  function save(newItems){
+    items=newItems;localStorage.setItem(storageKey,JSON.stringify(items));
+    currentRotation=0;canvas.style.transition='none';canvas.style.transform='rotate(0deg)';draw();
+  }
+  function reset(){save(defaults.slice());}
+  return{items:()=>items,spin,save,reset};
+}
+
+const wheelA=makeWheel('wheelA','themeWheelCharsV3',defaultCharacters,colorsA);
+const wheelB=makeWheel('wheelB','themeWheelBgsV3',defaultBackgrounds,colorsB);
+document.getElementById('boxA').value=wheelA.items().join('\n');
+document.getElementById('boxB').value=wheelB.items().join('\n');
+
+let lastA='',lastB='';
+function updateCombo(){
+  const el=document.getElementById('comboText');
+  if(lastA&&lastB) el.textContent=`"${lastA}"\nอยู่ใน\n"${lastB}"`;
+  else if(lastA) el.textContent=`ตัวละคร: ${lastA}\n— หมุนวงล้อพื้นหลังด้วยนะ!`;
+  else if(lastB) el.textContent=`พื้นหลัง: ${lastB}\n— หมุนวงล้อตัวละครด้วยนะ!`;
+}
+
+document.getElementById('spinA').addEventListener('click',()=>{
+  document.getElementById('spinA').disabled=true;
+  document.getElementById('resultA').textContent='🎲 กำลังสุ่ม...';
+  wheelA.spin(p=>{document.getElementById('spinA').disabled=false;document.getElementById('resultA').textContent='🎯 '+p;lastA=p;updateCombo();});
+});
+document.getElementById('spinB').addEventListener('click',()=>{
+  document.getElementById('spinB').disabled=true;
+  document.getElementById('resultB').textContent='🎲 กำลังสุ่ม...';
+  wheelB.spin(p=>{document.getElementById('spinB').disabled=false;document.getElementById('resultB').textContent='🎯 '+p;lastB=p;updateCombo();});
+});
+document.getElementById('saveA').addEventListener('click',()=>{
+  const l=document.getElementById('boxA').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(l.length<2){alert('ใส่อย่างน้อย 2 รายการ');return;}
+  wheelA.save(l);document.getElementById('resultA').textContent='';
+});
+document.getElementById('resetA').addEventListener('click',()=>{wheelA.reset();document.getElementById('boxA').value=wheelA.items().join('\n');document.getElementById('resultA').textContent='';});
+document.getElementById('saveB').addEventListener('click',()=>{
+  const l=document.getElementById('boxB').value.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(l.length<2){alert('ใส่อย่างน้อย 2 รายการ');return;}
+  wheelB.save(l);document.getElementById('resultB').textContent='';
+});
+document.getElementById('resetB').addEventListener('click',()=>{wheelB.reset();document.getElementById('boxB').value=wheelB.items().join('\n');document.getElementById('resultB').textContent='';});
+</script>
+</body>
+</html>
